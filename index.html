@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animator App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .top-bar, .tools-bar, .timeline-bar, .bottom-bar {
+            background-color: #2c2c44;
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #4a4a6e;
+        }
+
+        .top-bar {
+            justify-content: space-between;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a1a2e;
+            position: relative;
+        }
+
+        .canvas-container {
+            flex-grow: 1;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .canvas-container canvas {
+            background-color: #1a1a2e;
+        }
+        
+        .timeline-bar {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 0.5rem;
+        }
+
+        .tool-button, .frame-control-button {
+            background-color: #4a4a6e;
+            color: #e0e0e0;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .tool-button:hover, .frame-control-button:hover {
+            background-color: #6a6a8e;
+        }
+
+        .tool-button.active, .frame-control-button.active {
+            background-color: #7b68ee;
+        }
+
+        .tool-button:active, .frame-control-button:active {
+            transform: scale(0.98);
+        }
+
+        .frame-thumbnail {
+            background-color: #374151;
+            border: 2px solid #374151;
+            margin-right: 0.5rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .frame-thumbnail.active {
+            border-color: #7b68ee;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 8px;
+            background: #4a4a6e;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #7b68ee;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .canvas-container canvas {
+            cursor: crosshair;
+        }
+
+        .canvas-draw-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.9 2.1c-.5-.5-1.1-.9-1.8-1.2l-1.3-.5c-1.3-.5-2.6-.4-3.8.3L3 12.3c-.6.4-.8 1.1-.7 1.8l.2 1.3c.3.8.8 1.4 1.5 1.8L12 21.6c.7.4 1.5.3 2.1-.2l.7-.7c.6-.6.8-1.4.5-2.1l-.8-1.3l2.8-2.8l1.3.8c.7.4 1.4.2 2.1-.2l.7-.7c.5-.5.9-1.1 1.2-1.8l.5-1.3c.5-1.3.4-2.6-.3-3.8l-1.6-2.6z"/></svg>') 12 12, crosshair !important;
+        }
+        
+        .canvas-freehand-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21.6C7.3 21.6 3.4 17.7 3.4 13c0-2.8 1.4-5.3 3.6-6.8L13 2.4c.5-.3 1.1-.3 1.6 0l4.3 2.5c.6.4.9 1 .8 1.7l-.4 2c-.1.8-.7 1.3-1.4 1.5L12 11.4c-1.6.3-2.6 1.8-2.3 3.4c.3 1.6 1.8 2.6 3.4 2.3l.5-.1"/></svg>') 12 12, crosshair !important;
+        }
+
+        .canvas-fill-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="white" d="M20 12c0 2.21-1.79 4-4 4h-1v-4H9.5a.5.5 0 0 1 0-1h5V8c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v2H3a1 1 0 0 0 0 2h3v2c0 1.1.9 2 2 2h2v4a1 1 0 0 0 1 1h4c2.21 0 4-1.79 4-4v-4h1v-2c0-2.21-1.79-4-4-4H9.5a.5.5 0 0 1 0-1H14c1.1 0 2 .9 2 2v1h4v-2c0-1.1-.9-2-2-2h-3v-4c0-2.21-1.79-4-4-4S6 3.79 6 6v4H2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h4v4c0 2.21 1.79 4 4 4h4c2.21 0 4-1.79 4-4v-4h1c2.21 0 4-1.79 4-4V6c0-2.21-1.79-4-4-4s-4 1.79-4 4v1h-3V6c0-1.1.9-2 2-2h3a2 2 0 0 1 2 2v2c0 1.1-.9 2-2 2h-1v-2c0-1.1-.9-2-2-2H8a2 2 0 0 1-2 2v1H2zM8 8h10c.55 0 1 .45 1 1v2h-8c-2.21 0-4 1.79-4 4v4H8V8z"/></svg>') 12 12, auto !important;
+        }
+
+        .canvas-move-cursor {
+            cursor: grab !important;
+        }
+
+        .canvas-move-all-cursor {
+            cursor: move !important;
+        }
+
+        .canvas-rotate-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v3m0 14v3m9-12h-3M5 12H2m12.3-6.5l-2.1 2.1M9.8 17.5l-2.1 2.1m4.3-15.7l2.1-2.1m-2.1 12.8l-2.1-2.1"/></svg>') 12 12, auto !important;
+        }
+
+        .canvas-stretch-cursor {
+            cursor: ns-resize !important;
+        }
+        
+        .canvas-eraser-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 3L14.4 9.6a1 1 0 0 1-1.4 0L3 19.6V21h1.4L18.4 10.4a1 1 0 0 1 0-1.4L21 3zM15 6L6 15"/></svg>') 12 12, auto !important;
+        }
+    </style>
+</head>
+<body class="bg-[#1a1a2e] text-[#e0e0e0] flex flex-col h-screen overflow-hidden font-[Poppins]">
+    <header class="top-bar flex justify-between items-center p-2 border-b border-[#4a4a6e] bg-[#2c2c44]">
+        <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Animator</h1>
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2">
+                <label for="bgColorPicker" class="text-sm font-medium">Background:</label>
+                <input type="color" id="bgColorPicker" value="#1a1a2e" class="w-8 h-8 rounded-full border-none cursor-pointer">
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="bgImageInput" class="text-sm font-medium">BG Image:</label>
+                <input type="file" id="bgImageInput" accept="image/*" class="text-xs file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#4a4a6e] file:text-[#e0e0e0] hover:file:bg-[#6a6a8e]">
+            </div>
+            <select id="bgSizeSelect" class="bg-[#4a4a6e] text-[#e0e0e0] text-xs p-1 rounded-md cursor-pointer">
+                <option value="cover">Cover</option>
+                <option value="contain">Contain</option>
+                <option value="fill">Fill</option>
+            </select>
+            <button id="clearBtn" class="bg-red-500 hover:bg-red-600 text-white font-medium py-1 px-3 rounded-md transition-colors text-xs">Clear Frame</button>
+            <button id="resetAllBtn" class="bg-red-500 hover:bg-red-600 text-white font-medium py-1 px-3 rounded-md transition-colors text-xs">Reset All</button>
+        </div>
+    </header>
+
+    <div class="tools-bar flex items-center justify-between p-2 border-b border-[#4a4a6e] bg-[#2c2c44]">
+        <div class="flex items-center space-x-2">
+            <button id="drawBtn" class="tool-button active flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8.5L9.5 12.5L14 8L18.5 12.5L22.5 8.5L12 2L1.5 8.5z"/><path d="M12 2L1.5 8.5L5.5 12.5L9.5 8.5L14 12.5L18.5 8.5L22.5 12.5L12 19L1.5 12.5z"/></svg>
+                Line
+            </button>
+            <button id="freehandBtn" class="tool-button flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                Freehand
+            </button>
+            <button id="fillBtn" class="tool-button flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 7.5L14 2L2.5 13.5l11.5 11.5L21.5 18l-7.5-7.5zM2 22l1.5-1.5L20 4.5l-1.5-1.5L2 22z"/></svg>
+                Fill
+            </button>
+            <button id="moveBtn" class="tool-button flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5V2m0 20v-3m7-7h3m-20 0h3m-5 5l2-2m-2 4l2-2m2-5l-2-2m2-4l-2-2m10.8 10.8L12 12m0 0l-5.7-5.7"/></svg>
+                Move
+            </button>
+            <button id="rotateBtn" class="tool-button flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2V2m-2 4L12 2l2 4"/></svg>
+                Rotate
+            </button>
+            <button id="stretchBtn" class="tool-button flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20h2a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M8 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h2M10 12h4"/></svg>
+                Stretch
+            </button>
+            <button id="eraserBtn" class="tool-button flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4L10 15.5L3 12.5L2 14.5L10 22L22 10z"/></svg>
+                Eraser
+            </button>
+        </div>
+        <div class="flex items-center space-x-4 text-sm">
+            <div class="slider-group">
+                <span>Size:</span>
+                <input type="range" id="lineSizeSlider" min="1" max="20" value="4">
+                <span id="lineSizeValue">4</span>
+            </div>
+            <div class="slider-group">
+                <span>FPS:</span>
+                <input type="range" id="fpsSlider" min="1" max="60" value="12">
+                <span id="fpsValue">12</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="onionSkinToggle" class="text-sm font-medium">Onion Skin:</label>
+                <input type="checkbox" id="onionSkinToggle" class="w-4 h-4 rounded-md border-gray-300">
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="undoBtn" class="frame-control-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-5 7l5-5l5 5"/></svg>
+                </button>
+                <button id="redoBtn" class="frame-control-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-5-7l5 5l5-5"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="canvas-container w-full h-full">
+            <canvas id="animatorCanvas" class="w-full h-full"></canvas>
+        </div>
+        
+        <div id="inventoryPanel" class="absolute left-4 top-1/2 -translate-y-1/2 w-48 bg-[#2c2c44] border border-[#4a4a6e] p-4 rounded-lg shadow-lg hidden">
+            <h3 class="text-lg font-bold mb-2">Inventory</h3>
+            <div id="inventoryGrid" class="grid grid-cols-2 gap-2"></div>
+        </div>
+    </main>
+
+    <div class="timeline-bar bg-[#2c2c44] flex items-center gap-2 p-2 border-t border-[#4a4a6e] overflow-x-auto whitespace-nowrap">
+        <div class="flex items-center space-x-2 mr-4">
+            <button id="playBtn" class="tool-button p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button id="stopBtn" class="tool-button p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+            </button>
+        </div>
+        <div id="timeline" class="flex items-center overflow-x-auto space-x-2 mr-4"></div>
+        <div class="flex-shrink-0 flex items-center space-x-2">
+            <button id="addFrameBtn" class="frame-control-button">Add Frame</button>
+            <button id="deleteFrameBtn" class="frame-control-button">Delete</button>
+            <button id="duplicateFrameBtn" class="frame-control-button">Duplicate</button>
+            <button id="exportBtn" class="tool-button bg-green-500 hover:bg-green-600">Export as Video</button>
+        </div>
+    </div>
+    
+    <div class="bottom-bar bg-[#2c2c44] p-2 border-t border-[#4a4a6e]">
+        <div class="flex items-center space-x-2">
+            <button id="circleAssetBtn" class="tool-button flex-1 min-w-0 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                Circle
+            </button>
+            <button id="squareAssetBtn" class="tool-button flex-1 min-w-0 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+                Square
+            </button>
+            <button id="triangleAssetBtn" class="tool-button flex-1 min-w-0 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 22h18z"/></svg>
+                Triangle
+            </button>
+            <button id="ovalAssetBtn" class="tool-button flex-1 min-w-0 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="10" ry="6"/></svg>
+                Oval
+            </button>
+            <button id="moveAllBtn" class="tool-button flex-1 min-w-0 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5V2m0 20v-3m7-7h3m-20 0h3m-5 5l2-2m-2 4l2-2m2-5l-2-2m2-4l-2-2m10.8 10.8L12 12m0 0l-5.7-5.7"/></svg>
+                Move All
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('animatorCanvas');
+        const ctx = canvas.getContext('2d');
+        const timeline = document.getElementById('timeline');
+
+        // UI Elements
+        const drawBtn = document.getElementById('drawBtn');
+        const freehandBtn = document.getElementById('freehandBtn');
+        const fillBtn = document.getElementById('fillBtn');
+        const moveBtn = document.getElementById('moveBtn');
+        const rotateBtn = document.getElementById('rotateBtn');
+        const moveAllBtn = document.getElementById('moveAllBtn');
+        const stretchBtn = document.getElementById('stretchBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const circleAssetBtn = document.getElementById('circleAssetBtn');
+        const squareAssetBtn = document.getElementById('squareAssetBtn');
+        const triangleAssetBtn = document.getElementById('triangleAssetBtn');
+        const ovalAssetBtn = document.getElementById('ovalAssetBtn');
+        const addFrameBtn = document.getElementById('addFrameBtn');
+        const deleteFrameBtn = document.getElementById('deleteFrameBtn');
+        const duplicateFrameBtn = document.getElementById('duplicateFrameBtn');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const lineSizeSlider = document.getElementById('lineSizeSlider');
+        const lineSizeValue = document.getElementById('lineSizeValue');
+        const fpsSlider = document.getElementById('fpsSlider');
+        const fpsValue = document.getElementById('fpsValue');
+        const clearBtn = document.getElementById('clearBtn');
+        const resetAllBtn = document.getElementById('resetAllBtn');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const onionSkinToggle = document.getElementById('onionSkinToggle');
+        const bgImageInput = document.getElementById('bgImageInput');
+        const bgSizeSelect = document.getElementById('bgSizeSelect');
+        const bgColorPicker = document.getElementById('bgColorPicker');
+
+        // State Variables
+        let currentMode = 'line';
+        let isDrawing = false;
+        let isDrawingFreehand = false;
+        let isMoving = false;
+        let isRotating = false;
+        let isMovingAll = false;
+        let isStretching = false;
+        let currentStroke = null;
+        let selectedStrokeIndex = -1;
+        let selectedInventoryItem = null;
+        let startMovePoint = { x: 0, y: 0 };
+        let originalPositions = { points: [] };
+        let startAngle = 0;
+        let fixedPointIndex = -1;
+        let movablePointIndex = -1;
+        let originalShapeSize = 0;
+
+        // Data Storage
+        let points = [];
+        let strokes = [];
+        let history = [{ points: [], strokes: [] }];
+        let historyIndex = 0;
+        let frames = [];
+        let currentFrameIndex = 0;
+        let inventory = [];
+
+        // Animation State
+        let animationPlaying = false;
+        let animationFrameId = null;
+        let lastFrameTime = 0;
+        let backgroundImg = null;
+        let backgroundSize = 'cover';
+        let backgroundColor = '#1a1a2e';
+        let currentAsset = null;
+
+        // --- Utility Functions ---
+        function saveHistory() {
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, history.length);
+            }
+            history.push({
+                points: JSON.parse(JSON.stringify(points)),
+                strokes: JSON.parse(JSON.stringify(strokes))
+            });
+            historyIndex = history.length - 1;
+        }
+
+        function loadFromHistory(index) {
+            const state = history[index];
+            points = JSON.parse(JSON.stringify(state.points));
+            strokes = JSON.parse(JSON.stringify(state.strokes));
+            redrawCanvas();
+        }
+
+        function initializeInventory() {
+            inventory = [
+                {
+                    id: 'stickman',
+                    name: 'Stickman',
+                    data: {
+                        points: [
+                            { x: 0, y: 0 }, { x: 0, y: 50 },
+                            { x: -25, y: 75 }, { x: 25, y: 75 },
+                            { x: -15, y: 100 }, { x: 15, y: 100 },
+                            { x: 0, y: -20 },
+                        ],
+                        strokes: [
+                            { type: 'line', start: 0, end: 1 },
+                            { type: 'line', start: 2, end: 0 },
+                            { type: 'line', start: 3, end: 0 },
+                            { type: 'line', start: 4, end: 1 },
+                            { type: 'line', start: 5, end: 1 },
+                            { type: 'circle', center: 6, radius: 20 },
+                        ]
+                    }
+                }
+            ];
+        }
+
+        // --- Mouse Event Handlers ---
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const scaledMousePoint = { x: mousePoint.x * scaleX, y: mousePoint.y * scaleY };
+            
+            if (currentMode === 'line') {
+                isDrawing = true;
+                const closestPoint = findClosestPoint(scaledMousePoint, points);
+                const connectionDistanceThreshold = 40;
+                let startPointIndex;
+                if (closestPoint && closestPoint.distance < connectionDistanceThreshold) {
+                    startPointIndex = closestPoint.index;
+                } else {
+                    points.push(scaledMousePoint);
+                    startPointIndex = points.length - 1;
+                }
+                currentStroke = { type: 'line', start: startPointIndex, end: scaledMousePoint, color: '#FFFFFF', width: parseInt(lineSizeSlider.value) };
+            } else if (currentMode === 'freehand') {
+                isDrawingFreehand = true;
+                const closestPoint = findClosestPoint(scaledMousePoint, points);
+                const connectionDistanceThreshold = 40;
+                let handlePointIndex;
+                if (closestPoint && closestPoint.distance < connectionDistanceThreshold) {
+                    points.push(closestPoint.point);
+                    handlePointIndex = points.length - 1;
+                } else {
+                    points.push(scaledMousePoint);
+                    handlePointIndex = points.length - 1;
+                }
+                currentStroke = { type: 'freehand', indices: [handlePointIndex], color: '#FFFFFF', width: parseInt(lineSizeSlider.value), handlePointIndex: handlePointIndex };
+            } else if (currentMode === 'fill') {
+                redrawCanvas();
+                const fillColor = hexToRgb(bgColorPicker.value);
+                fillArea(scaledMousePoint.x, scaledMousePoint.y, fillColor);
+            } else if (currentMode === 'asset') {
+                const shapeSize = parseInt(lineSizeSlider.value) * 5;
+                if (currentAsset === 'circle') {
+                    points.push(scaledMousePoint);
+                    strokes.push({ type: 'shape', shape: 'circle', center: points.length - 1, radius: shapeSize, color: '#FFFFFF', width: parseInt(lineSizeSlider.value) });
+                } else if (currentAsset === 'square') {
+                    points.push(scaledMousePoint);
+                    strokes.push({ type: 'shape', shape: 'square', center: points.length - 1, radius: shapeSize, color: '#FFFFFF', width: parseInt(lineSizeSlider.value) });
+                } else if (currentAsset === 'triangle') {
+                    points.push(scaledMousePoint);
+                    strokes.push({ type: 'shape', shape: 'triangle', center: points.length - 1, radius: shapeSize, color: '#FFFFFF', width: parseInt(lineSizeSlider.value) });
+                } else if (currentAsset === 'oval') {
+                    points.push(scaledMousePoint);
+                    strokes.push({ type: 'shape', shape: 'oval', center: points.length - 1, rx: shapeSize * 1.5, ry: shapeSize, color: '#FFFFFF', width: parseInt(lineSizeSlider.value) });
+                }
+                else if (selectedInventoryItem) {
+                    const item = inventory.find(i => i.id === selectedInventoryItem.id);
+                    const basePointIndex = points.length;
+                    const stroke = { type: 'inventory-item', itemId: item.id, basePointIndex: basePointIndex, x: scaledMousePoint.x, y: scaledMousePoint.y };
+                    item.data.points.forEach(p => points.push({ x: scaledMousePoint.x + p.x, y: scaledMousePoint.y + p.y }));
+                    strokes.push(stroke);
+                    selectedInventoryItem = null;
+                }
+                setMode('line');
+                saveHistory();
+            } else if (currentMode === 'move') {
+                const clickedStroke = findClosestStroke(scaledMousePoint);
+                if (clickedStroke !== -1) {
+                    isMoving = true;
+                    selectedStrokeIndex = clickedStroke;
+                    originalPositions.points = getPointsForStroke(strokes[selectedStrokeIndex]).map(index => ({ x: points[index].x, y: points[index].y }));
+                    startMovePoint = scaledMousePoint;
+                }
+            } else if (currentMode === 'rotate') {
+                const clickedStroke = findClosestStroke(scaledMousePoint);
+                if (clickedStroke !== -1 && strokes[clickedStroke].type === 'freehand') {
+                    isRotating = true;
+                    selectedStrokeIndex = clickedStroke;
+                    
+                    const pivotPoint = points[strokes[selectedStrokeIndex].handlePointIndex];
+                    originalPositions.points = strokes[selectedStrokeIndex].indices.map(index => ({ x: points[index].x - pivotPoint.x, y: points[index].y - pivotPoint.y }));
+                    originalPositions.pivot = {x: pivotPoint.x, y: pivotPoint.y};
+
+                    const dx = scaledMousePoint.x - pivotPoint.x;
+                    const dy = scaledMousePoint.y - pivotPoint.y;
+                    startAngle = Math.atan2(dy, dx);
+                }
+            } else if (currentMode === 'moveAll') {
+                isMovingAll = true;
+                originalPositions.points = points.map(p => ({ x: p.x, y: p.y }));
+                startMovePoint = scaledMousePoint;
+            } else if (currentMode === 'stretch') {
+                const clickedStroke = findClosestShape(scaledMousePoint);
+                if (clickedStroke !== -1) {
+                    isStretching = true;
+                    selectedStrokeIndex = clickedStroke;
+                    startMovePoint = scaledMousePoint;
+                    const stroke = strokes[selectedStrokeIndex];
+                    if (stroke.shape === 'circle' || stroke.shape === 'square' || stroke.shape === 'triangle') {
+                        originalShapeSize = stroke.radius;
+                    } else if (stroke.shape === 'oval') {
+                        originalShapeSize = { rx: stroke.rx, ry: stroke.ry };
+                    }
+                }
+            } else if (currentMode === 'eraser') {
+                const clickedStroke = findClosestStroke(scaledMousePoint);
+                if (clickedStroke !== -1) {
+                    strokes.splice(clickedStroke, 1);
+                    saveHistory();
+                }
+            }
+            redrawCanvas();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const currentPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const scaledCurrentPoint = { x: currentPoint.x * scaleX, y: currentPoint.y * scaleY };
+
+            if (currentMode === 'line' && isDrawing) {
+                currentStroke.end = scaledCurrentPoint;
+                redrawCanvas();
+                drawLinePreview(points[currentStroke.start], currentStroke.end);
+            } else if (currentMode === 'freehand' && isDrawingFreehand) {
+                if (calculateDistance(points[points.length - 1], scaledCurrentPoint) > 1) {
+                    const lastPoint = points[points.length - 1];
+                    points.push(scaledCurrentPoint);
+                    currentStroke.indices.push(points.length - 1);
+
+                    ctx.strokeStyle = currentStroke.color;
+                    ctx.lineWidth = currentStroke.width;
+                    ctx.beginPath();
+                    ctx.moveTo(lastPoint.x, lastPoint.y);
+                    ctx.lineTo(scaledCurrentPoint.x, scaledCurrentPoint.y);
+                    ctx.stroke();
+                }
+            } else if (currentMode === 'moveAll' && isMovingAll) {
+                const dx = scaledCurrentPoint.x - startMovePoint.x;
+                const dy = scaledCurrentPoint.y - startMovePoint.y;
+                points.forEach((point, index) => {
+                    point.x = originalPositions.points[index].x + dx;
+                    point.y = originalPositions.points[index].y + dy;
+                });
+                redrawCanvas();
+            } else if (currentMode === 'move' && isMoving && selectedStrokeIndex !== -1) {
+                const dx = scaledCurrentPoint.x - startMovePoint.x;
+                const dy = scaledCurrentPoint.y - startMovePoint.y;
+                
+                const pointsToMove = getPointsForStroke(strokes[selectedStrokeIndex]);
+                pointsToMove.forEach((pointIndex, i) => {
+                    points[pointIndex].x = originalPositions.points[i].x + dx;
+                    points[pointIndex].y = originalPositions.points[i].y + dy;
+                });
+                redrawCanvas();
+            } else if (currentMode === 'rotate' && isRotating && selectedStrokeIndex !== -1) {
+                const freehandStroke = strokes[selectedStrokeIndex];
+                const pivotPoint = originalPositions.pivot;
+
+                const dx = scaledCurrentPoint.x - pivotPoint.x;
+                const dy = scaledCurrentPoint.y - pivotPoint.y;
+                const currentAngle = Math.atan2(dy, dx);
+                const angleDelta = currentAngle - startAngle;
+
+                freehandStroke.indices.forEach((pointIndex, originalIndex) => {
+                    const originalPoint = originalPositions.points[originalIndex];
+                    const rotatedX = originalPoint.x * Math.cos(angleDelta) - originalPoint.y * Math.sin(angleDelta);
+                    const rotatedY = originalPoint.x * Math.sin(angleDelta) + originalPoint.y * Math.cos(angleDelta);
+                    points[pointIndex].x = rotatedX + pivotPoint.x;
+                    points[pointIndex].y = rotatedY + pivotPoint.y;
+                });
+                redrawCanvas();
+            } else if (currentMode === 'stretch' && isStretching && selectedStrokeIndex !== -1) {
+                const stroke = strokes[selectedStrokeIndex];
+                const center = points[stroke.center];
+                const initialDist = calculateDistance(startMovePoint, center);
+                const currentDist = calculateDistance(scaledCurrentPoint, center);
+                const scaleFactor = currentDist / initialDist;
+
+                if (stroke.shape === 'circle' || stroke.shape === 'square' || stroke.shape === 'triangle') {
+                    stroke.radius = originalShapeSize * scaleFactor;
+                } else if (stroke.shape === 'oval') {
+                    stroke.rx = originalShapeSize.rx * scaleFactor;
+                    stroke.ry = originalShapeSize.ry * scaleFactor;
+                }
+                redrawCanvas();
+            } else {
+                 redrawCanvas();
+                 if (currentMode === 'move' || currentMode === 'rotate' || currentMode === 'stretch' || currentMode === 'eraser') {
+                    const hoveredStroke = findClosestStroke(scaledCurrentPoint);
+                    if (hoveredStroke !== -1) {
+                        drawHighlight(hoveredStroke);
+                    }
+                 } else if (currentMode === 'line' && !isDrawing) {
+                    const closestPoint = findClosestPoint(scaledCurrentPoint, points);
+                    const connectionDistanceThreshold = 40;
+                    if (closestPoint && closestPoint.distance < connectionDistanceThreshold) {
+                        ctx.beginPath();
+                        ctx.arc(closestPoint.point.x, closestPoint.point.y, connectionDistanceThreshold, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#FFFFFF';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                 }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (currentMode === 'line' && isDrawing) {
+                isDrawing = false;
+                const connectionDistanceThreshold = 40;
+                let endPointIndex;
+                const closestEndPoint = findClosestPoint(currentStroke.end, points);
+                if (closestEndPoint && closestEndPoint.distance < connectionDistanceThreshold) {
+                    endPointIndex = closestEndPoint.index;
+                } else {
+                    points.push(currentStroke.end);
+                    endPointIndex = points.length - 1;
+                }
+                
+                strokes.push({ type: 'line', start: currentStroke.start, end: endPointIndex, color: currentStroke.color, width: currentStroke.width });
+                currentStroke = null;
+                saveHistory();
+                updateFrame();
+            } else if (currentMode === 'freehand' && isDrawingFreehand) {
+                isDrawingFreehand = false;
+                if (currentStroke.indices.length > 0) {
+                    const lastPoint = points[currentStroke.indices[currentStroke.indices.length - 1]];
+                    const closestEndPoint = findClosestPoint(lastPoint, points);
+                    const connectionDistanceThreshold = 40;
+                    
+                    if (closestEndPoint && closestEndPoint.distance < connectionDistanceThreshold) {
+                        currentStroke.handlePointIndex = closestEndPoint.index;
+                    } else {
+                        points.push(lastPoint);
+                        currentStroke.handlePointIndex = points.length - 1;
+                    }
+
+                    strokes.push(currentStroke);
+                    currentStroke = null;
+                    saveHistory();
+                    updateFrame();
+                }
+            } else if (isMovingAll || isMoving || isRotating || isStretching) {
+                isMovingAll = false;
+                isMoving = false;
+                isRotating = false;
+                isStretching = false;
+                selectedStrokeIndex = -1;
+                saveHistory();
+                updateFrame();
+            }
+            redrawCanvas();
+        });
+
+        // --- Core Drawing and Utility Functions ---
+        function getPointsForStroke(stroke) {
+            const indices = [];
+            switch (stroke.type) {
+                case 'line':
+                    indices.push(stroke.start, stroke.end);
+                    break;
+                case 'freehand':
+                    indices.push(...stroke.indices);
+                    if (stroke.handlePointIndex !== undefined) {
+                        indices.push(stroke.handlePointIndex);
+                    }
+                    break;
+                case 'shape':
+                    indices.push(stroke.center);
+                    break;
+                case 'inventory-item':
+                    const item = inventory.find(i => i.id === stroke.itemId);
+                    if (item) {
+                          for (let i = 0; i < item.data.points.length; i++) {
+                             indices.push(stroke.basePointIndex + i);
+                           }
+                    }
+                    break;
+                case 'joint':
+                    indices.push(stroke.start, stroke.end);
+                    break;
+            }
+            return indices;
+        }
+        
+        function findClosestShape(mousePoint, threshold = 20) {
+            for (let i = strokes.length - 1; i >= 0; i--) {
+                const stroke = strokes[i];
+                if (stroke.type === 'shape') {
+                    const center = points[stroke.center];
+                    const distance = calculateDistance(mousePoint, center);
+                    
+                    if (stroke.shape === 'circle') {
+                        if (distance < stroke.radius + threshold && distance > stroke.radius - threshold) {
+                            return i;
+                        }
+                    } else if (stroke.shape === 'square') {
+                        const halfSide = stroke.radius;
+                        if (
+                            mousePoint.x > center.x - halfSide - threshold &&
+                            mousePoint.x < center.x + halfSide + threshold &&
+                            mousePoint.y > center.y - halfSide - threshold &&
+                            mousePoint.y < center.y + halfSide + threshold
+                        ) {
+                            return i;
+                        }
+                    } else if (stroke.shape === 'triangle') {
+                         const v1 = { x: center.x, y: center.y - stroke.radius };
+                         const v2 = { x: center.x - stroke.radius, y: center.y + stroke.radius };
+                         const v3 = { x: center.x + stroke.radius, y: center.y + stroke.radius };
+                         if (
+                             distToSegment(mousePoint, v1, v2) < threshold ||
+                             distToSegment(mousePoint, v2, v3) < threshold ||
+                             distToSegment(mousePoint, v3, v1) < threshold
+                         ) {
+                             return i;
+                         }
+                    } else if (stroke.shape === 'oval') {
+                        const rx = stroke.rx;
+                        const ry = stroke.ry;
+                        const dx = mousePoint.x - center.x;
+                        const dy = mousePoint.y - center.y;
+                        const distOnEllipse = Math.sqrt( (dx*dx)/(rx*rx) + (dy*dy)/(ry*ry) );
+                        if (distOnEllipse < 1.1 && distOnEllipse > 0.9) {
+                            return i;
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
+        function findClosestStroke(mousePoint, threshold = 20) {
+            for (let i = strokes.length - 1; i >= 0; i--) {
+                const stroke = strokes[i];
+                const pointsInStroke = getPointsForStroke(stroke);
+                if (pointsInStroke.length === 0) continue;
+                
+                if (stroke.type === 'line' || stroke.type === 'joint') {
+                    const p1 = points[stroke.start];
+                    const p2 = points[stroke.end];
+                    const distance = distToSegment(mousePoint, p1, p2);
+                    if (distance < threshold) {
+                        return i;
+                    }
+                } else if (stroke.type === 'freehand') {
+                    for (let j = 0; j < stroke.indices.length - 1; j++) {
+                        const p1 = points[stroke.indices[j]];
+                        const p2 = points[stroke.indices[j+1]];
+                        const distance = distToSegment(mousePoint, p1, p2);
+                        if (distance < threshold) {
+                            return i;
+                        }
+                    }
+                } else if (stroke.type === 'shape') {
+                    const center = points[stroke.center];
+                    const distance = calculateDistance(mousePoint, center);
+                    
+                    if (stroke.shape === 'circle') {
+                        if (distance < stroke.radius + threshold && distance > stroke.radius - threshold) {
+                            return i;
+                        }
+                    } else if (stroke.shape === 'oval') {
+                        const rx = stroke.rx;
+                        const ry = stroke.ry;
+                        const dx = mousePoint.x - center.x;
+                        const dy = mousePoint.y - center.y;
+                        const distOnEllipse = Math.sqrt( (dx*dx)/(rx*rx) + (dy*dy)/(ry*ry) );
+                        if (distOnEllipse < 1.1 && distOnEllipse > 0.9) {
+                            return i;
+                        }
+                    }
+                    else if (distance < stroke.radius + threshold && distance > stroke.radius - threshold) {
+                        return i;
+                    }
+                } else if (stroke.type === 'inventory-item') {
+                    const item = inventory.find(item => item.id === stroke.itemId);
+                    if (!item) continue;
+                    
+                    for (const s of item.data.strokes) {
+                        if (s.type === 'line') {
+                            const p1 = points[stroke.basePointIndex + s.start];
+                            const p2 = points[stroke.basePointIndex + s.end];
+                            const distance = distToSegment(mousePoint, p1, p2);
+                            if (distance < threshold) return i;
+                        } else if (s.type === 'freehand') {
+                            for (let j = 0; j < s.indices.length - 1; j++) {
+                                const p1 = points[stroke.basePointIndex + s.indices[j]];
+                                const p2 = points[stroke.basePointIndex + s.indices[j+1]];
+                                const distance = distToSegment(mousePoint, p1, p2);
+                                if (distance < threshold) return i;
+                            }
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+        
+        function distToSegment(p, a, b) {
+            const l2 = calculateDistance(a, b) ** 2;
+            if (l2 === 0) return calculateDistance(p, a);
+            let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            const projection = { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+            return calculateDistance(p, projection);
+        }
+
+        function drawHighlight(strokeIndex) {
+            const stroke = strokes[strokeIndex];
+            if (!stroke) return;
+            
+            ctx.save();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = (stroke.width || 4) + 2;
+            ctx.setLineDash([5, 5]);
+
+            drawStroke(stroke);
+            
+            ctx.restore();
+        }
+
+        function redrawCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.fillStyle = backgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (backgroundImg) {
+                let scale, x, y, width, height;
+                const canvasAspect = canvas.width / canvas.height;
+                const imgAspect = backgroundImg.width / backgroundImg.height;
+
+                switch (backgroundSize) {
+                    case 'cover':
+                        if (imgAspect > canvasAspect) {
+                            scale = canvas.height / backgroundImg.height;
+                            width = backgroundImg.width * scale;
+                            height = canvas.height;
+                            x = (canvas.width - width) / 2;
+                            y = 0;
+                        } else {
+                            scale = canvas.width / backgroundImg.width;
+                            width = canvas.width;
+                            height = backgroundImg.height * scale;
+                            x = 0;
+                            y = (canvas.height - height) / 2;
+                        }
+                        break;
+                    case 'contain':
+                        if (imgAspect > canvasAspect) {
+                            scale = canvas.width / backgroundImg.width;
+                            width = canvas.width;
+                            height = backgroundImg.height * scale;
+                            x = 0;
+                            y = (canvas.height - height) / 2;
+                        } else {
+                            scale = canvas.height / backgroundImg.height;
+                            width = backgroundImg.width * scale;
+                            height = canvas.height;
+                            x = (canvas.width - width) / 2;
+                            y = 0;
+                        }
+                        break;
+                    case 'fill':
+                        width = canvas.width;
+                        height = canvas.height;
+                        x = 0;
+                        y = 0;
+                        break;
+                }
+                ctx.drawImage(backgroundImg, x, y, width, height);
+            }
+            
+            drawOnionSkin();
+
+            strokes.forEach(stroke => {
+                drawStroke(stroke);
+            });
+        }
+
+        function drawStroke(stroke) {
+            ctx.strokeStyle = stroke.color || '#FFFFFF';
+            ctx.lineWidth = stroke.width || 4;
+            ctx.fillStyle = stroke.color || '#FFFFFF';
+
+            switch (stroke.type) {
+                case 'line':
+                    if (points[stroke.start] && points[stroke.end]) {
+                        ctx.beginPath();
+                        ctx.moveTo(points[stroke.start].x, points[stroke.start].y);
+                        ctx.lineTo(points[stroke.end].x, points[stroke.end].y);
+                        ctx.stroke();
+                    }
+                    break;
+                case 'freehand':
+                    if (stroke.indices.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(points[stroke.indices[0]].x, points[stroke.indices[0]].y);
+                        for (let i = 1; i < stroke.indices.length; i++) {
+                            ctx.lineTo(points[stroke.indices[i]].x, points[stroke.indices[i]].y);
+                        }
+                        ctx.stroke();
+                    }
+                    break;
+                case 'shape':
+                    const center = points[stroke.center];
+                    if (!center) return;
+                    if (stroke.shape === 'circle') {
+                        ctx.beginPath();
+                        ctx.arc(center.x, center.y, stroke.radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else if (stroke.shape === 'square') {
+                        const side = stroke.radius * 2;
+                        const x = center.x - stroke.radius;
+                        const y = center.y - stroke.radius;
+                        ctx.beginPath();
+                        ctx.rect(x, y, side, side);
+                        ctx.stroke();
+                    } else if (stroke.shape === 'triangle') {
+                        const x1 = center.x;
+                        const y1 = center.y - stroke.radius;
+                        const x2 = center.x - stroke.radius;
+                        const y2 = center.y + stroke.radius;
+                        const x3 = center.x + stroke.radius;
+                        const y3 = center.y + stroke.radius;
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.lineTo(x3, y3);
+                        ctx.closePath();
+                        ctx.stroke();
+                    } else if (stroke.shape === 'oval') {
+                        ctx.beginPath();
+                        ctx.ellipse(center.x, center.y, stroke.rx, stroke.ry, 0, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+                    break;
+                case 'inventory-item':
+                    drawInventoryItem(stroke);
+                    break;
+                case 'joint':
+                    break;
+            }
+        }
+
+        function drawLinePreview(startPoint, endPoint) {
+            ctx.strokeStyle = '#FFFFFF80';
+            ctx.lineWidth = parseInt(lineSizeSlider.value);
+            ctx.beginPath();
+            ctx.moveTo(startPoint.x, startPoint.y);
+            ctx.lineTo(endPoint.x, endPoint.y);
+            ctx.stroke();
+        }
+
+        function drawInventoryItem(stroke) {
+            const item = inventory.find(i => i.id === stroke.itemId);
+            if (!item) return;
+
+            const basePointIndex = stroke.basePointIndex;
+
+            item.data.strokes.forEach(s => {
+                ctx.strokeStyle = s.color || '#FFFFFF';
+                ctx.lineWidth = s.width || 4;
+                
+                switch (s.type) {
+                    case 'line':
+                        const startPoint = points[basePointIndex + s.start];
+                        const endPoint = points[basePointIndex + s.end];
+                        ctx.beginPath();
+                        ctx.moveTo(startPoint.x, startPoint.y);
+                        ctx.lineTo(endPoint.x, endPoint.y);
+                        ctx.stroke();
+                        break;
+                    case 'circle':
+                        const centerPointCircle = points[basePointIndex + s.center];
+                        ctx.beginPath();
+                        ctx.arc(centerPointCircle.x, centerPointCircle.y, s.radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                        break;
+                    case 'arc':
+                        const centerPointArc = points[basePointIndex + s.center];
+                        ctx.beginPath();
+                        ctx.arc(centerPointArc.x, centerPointArc.y, s.radius, s.startAngle, s.endAngle);
+                        ctx.stroke();
+                        break;
+                }
+            });
+        }
+
+        function fillArea(startX, startY, fillColor) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const startPos = (startY * canvas.width + startX) * 4;
+            const startColor = [data[startPos], data[startPos + 1], data[startPos + 2]];
+
+            if (
+                startColor[0] === fillColor[0] &&
+                startColor[1] === fillColor[1] &&
+                startColor[2] === fillColor[2]
+            ) {
+                return;
+            }
+
+            const pixelStack = [[startX, startY]];
+
+            function colorMatch(r1, g1, b1, r2, g2, b2) {
+                return r1 === r2 && g1 === g2 && b1 === b2;
+            }
+
+            while (pixelStack.length) {
+                let newPos = pixelStack.pop();
+                let x = newPos[0];
+                let y = newPos[1];
+
+                let pixelPos = (y * canvas.width + x) * 4;
+                
+                while (y >= 0 && colorMatch(data[pixelPos], data[pixelPos + 1], data[pixelPos + 2], startColor[0], startColor[1], startColor[2])) {
+                    y--;
+                    pixelPos -= canvas.width * 4;
+                }
+                pixelPos += canvas.width * 4;
+                y++;
+                let reachLeft = false;
+                let reachRight = false;
+                
+                while (y < canvas.height && colorMatch(data[pixelPos], data[pixelPos + 1], data[pixelPos + 2], startColor[0], startColor[1], startColor[2])) {
+                    data[pixelPos] = fillColor[0];
+                    data[pixelPos + 1] = fillColor[1];
+                    data[pixelPos + 2] = fillColor[2];
+                    data[pixelPos + 3] = 255;
+                    
+                    if (x > 0) {
+                        if (colorMatch(data[pixelPos - 4], data[pixelPos - 3], data[pixelPos - 2], startColor[0], startColor[1], startColor[2])) {
+                            if (!reachLeft) {
+                                pixelStack.push([x - 1, y]);
+                                reachLeft = true;
+                            }
+                        } else if (reachLeft) {
+                            reachLeft = false;
+                        }
+                    }
+                    
+                    if (x < canvas.width - 1) {
+                        if (colorMatch(data[pixelPos + 4], data[pixelPos + 5], data[pixelPos + 6], startColor[0], startColor[1], startColor[2])) {
+                            if (!reachRight) {
+                                pixelStack.push([x + 1, y]);
+                                reachRight = true;
+                            }
+                        } else if (reachRight) {
+                            reachRight = false;
+                        }
+                    }
+                    
+                    y++;
+                    pixelPos += canvas.width * 4;
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            if (document.getElementById(mode + 'Btn')) {
+                document.getElementById(mode + 'Btn').classList.add('active');
+            } else if (mode === 'asset') {
+                document.getElementById(currentAsset + 'AssetBtn').classList.add('active');
+            }
+
+            canvas.className = 'w-full h-full';
+            if (currentMode === 'line') {
+                canvas.classList.add('canvas-draw-cursor');
+            } else if (currentMode === 'freehand') {
+                canvas.classList.add('canvas-freehand-cursor');
+            } else if (currentMode === 'fill') {
+                canvas.classList.add('canvas-fill-cursor');
+            } else if (currentMode === 'move') {
+                canvas.classList.add('canvas-move-cursor');
+            } else if (currentMode === 'rotate') {
+                canvas.classList.add('canvas-rotate-cursor');
+            } else if (currentMode === 'moveAll') {
+                canvas.classList.add('canvas-move-all-cursor');
+            } else if (currentMode === 'stretch') {
+                canvas.classList.add('canvas-stretch-cursor');
+            } else if (currentMode === 'eraser') {
+                canvas.classList.add('canvas-eraser-cursor');
+            }
+        }
+
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return [r, g, b, 255];
+        }
+
+        function calculateDistance(point1, point2) {
+            return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+        }
+
+        function findClosestPoint(targetPoint, pointsArray) {
+            if (pointsArray.length === 0) return null;
+            let closestPoint = null;
+            let minDistance = Infinity;
+
+            pointsArray.forEach((point, index) => {
+                const dist = calculateDistance(targetPoint, point);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestPoint = { point, index, distance: dist };
+                }
+            });
+            return closestPoint;
+        }
+
+        // --- Frame and Playback Functions (rest of the app logic) ---
+        function addFrame() {
+            const frameData = {
+                points: JSON.parse(JSON.stringify(points)),
+                strokes: JSON.parse(JSON.stringify(strokes))
+            };
+            frames.splice(currentFrameIndex + 1, 0, frameData);
+            currentFrameIndex++;
+            switchFrame(currentFrameIndex);
+        }
+
+        function updateFrame() {
+            if (frames[currentFrameIndex]) {
+                frames[currentFrameIndex] = {
+                    points: JSON.parse(JSON.stringify(points)),
+                    strokes: JSON.parse(JSON.stringify(strokes))
+                };
+            }
+            updateTimeline();
+        }
+
+        function switchFrame(index) {
+            if (index >= 0 && index < frames.length) {
+                currentFrameIndex = index;
+                const frame = frames[currentFrameIndex];
+                points = JSON.parse(JSON.stringify(frame.points));
+                strokes = JSON.parse(JSON.stringify(frame.strokes));
+                
+                history = [{ points: points, strokes: strokes }];
+                historyIndex = 0;
+
+                redrawCanvas();
+                updateTimeline();
+            }
+        }
+
+        function deleteCurrentFrame() {
+            if (frames.length > 1) {
+                frames.splice(currentFrameIndex, 1);
+                currentFrameIndex = Math.max(0, currentFrameIndex - 1);
+                switchFrame(currentFrameIndex);
+            }
+        }
+
+        function duplicateCurrentFrame() {
+            const currentFrame = frames[currentFrameIndex];
+            const newFrame = {
+                points: JSON.parse(JSON.stringify(currentFrame.points)),
+                strokes: JSON.parse(JSON.stringify(currentFrame.strokes))
+            };
+            frames.splice(currentFrameIndex + 1, 0, newFrame);
+            currentFrameIndex++;
+            switchFrame(currentFrameIndex);
+        }
+
+        function resetAll() {
+            if (confirm('Are you sure you want to delete all frames and start a new animation?')) {
+                points = [];
+                strokes = [];
+                history = [{ points: [], strokes: [] }];
+                historyIndex = 0;
+                frames = [];
+                currentFrameIndex = 0;
+                addFrame();
+            }
+        }
+
+        function updateTimeline() {
+            timeline.innerHTML = '';
+            frames.forEach((frame, index) => {
+                const thumbnail = document.createElement('canvas');
+                thumbnail.className = 'frame-thumbnail';
+                thumbnail.width = 80;
+                thumbnail.height = 60;
+                const thumbCtx = thumbnail.getContext('2d');
+                thumbCtx.fillStyle = '#374151';
+                thumbCtx.fillRect(0, 0, 80, 60);
+
+                const tempPoints = frame.points;
+                const tempStrokes = frame.strokes;
+
+                if (tempPoints.length > 0) {
+                    const minX = Math.min(...tempPoints.map(p => p.x));
+                    const minY = Math.min(...tempPoints.map(p => p.y));
+                    const maxX = Math.max(...tempPoints.map(p => p.x));
+                    const maxY = Math.max(...tempPoints.map(p => p.y));
+                    const contentWidth = maxX - minX;
+                    const contentHeight = maxY - minY;
+                    const scale = Math.min(80 / (contentWidth || 1), 60 / (contentHeight || 1), 1);
+                    const offsetX = (80 - contentWidth * scale) / 2 - minX * scale;
+                    const offsetY = (60 - contentHeight * scale) / 2 - minY * scale;
+                    
+                    tempStrokes.forEach(stroke => {
+                        thumbCtx.strokeStyle = stroke.color || '#FFFFFF';
+                        thumbCtx.lineWidth = stroke.width || 2;
+                        if (stroke.type === 'line' && tempPoints[stroke.start] && tempPoints[stroke.end]) {
+                            thumbCtx.beginPath();
+                            thumbCtx.moveTo(tempPoints[stroke.start].x * scale + offsetX, tempPoints[stroke.start].y * scale + offsetY);
+                            thumbCtx.lineTo(tempPoints[stroke.end].x * scale + offsetX, tempPoints[stroke.end].y * scale + offsetY);
+                            thumbCtx.stroke();
+                        } else if (stroke.type === 'freehand' && stroke.indices.length > 1) {
+                            thumbCtx.beginPath();
+                            thumbCtx.moveTo(tempPoints[stroke.indices[0]].x * scale + offsetX, tempPoints[stroke.indices[0]].y * scale + offsetY);
+                            for (let i = 1; i < stroke.indices.length; i++) {
+                                thumbCtx.lineTo(tempPoints[stroke.indices[i]].x * scale + offsetX, tempPoints[stroke.indices[i]].y * scale + offsetY);
+                            }
+                            thumbCtx.stroke();
+                        }
+                    });
+                }
+
+
+                if (index === currentFrameIndex) {
+                    thumbnail.classList.add('active');
+                }
+                thumbnail.addEventListener('click', () => switchFrame(index));
+                timeline.appendChild(thumbnail);
+            });
+        }
+
+        function drawOnionSkin() {
+            if (!onionSkinToggle.checked || currentFrameIndex === 0) return;
+
+            const prevFrame = frames[currentFrameIndex - 1];
+            if (!prevFrame) return;
+
+            const prevPoints = prevFrame.points;
+            const prevStrokes = prevFrame.strokes;
+
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+
+            prevStrokes.forEach(stroke => {
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = stroke.width || 4;
+                if (stroke.type === 'line' && prevPoints[stroke.start] && prevPoints[stroke.end]) {
+                    ctx.beginPath();
+                    ctx.moveTo(prevPoints[stroke.start].x, prevPoints[stroke.start].y);
+                    ctx.lineTo(prevPoints[stroke.end].x, prevPoints[stroke.end].y);
+                    ctx.stroke();
+                } else if (stroke.type === 'freehand' && stroke.indices.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(prevPoints[stroke.indices[0]].x, prevPoints[stroke.indices[0]].y);
+                    for (let i = 1; i < stroke.indices.length; i++) {
+                        ctx.lineTo(prevPoints[stroke.indices[i]].x, prevPoints[stroke.indices[i]].y);
+                    }
+                    ctx.stroke();
+                }
+            });
+
+            ctx.restore();
+        }
+
+        function animate(timestamp) {
+            if (!animationPlaying) return;
+
+            const fps = parseInt(fpsSlider.value, 10);
+            const interval = 1000 / fps;
+
+            if (timestamp - lastFrameTime >= interval) {
+                lastFrameTime = timestamp;
+                
+                currentFrameIndex = (currentFrameIndex + 1) % frames.length;
+                switchFrame(currentFrameIndex);
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function exportVideo() {
+            if (frames.length === 0) {
+                alert('Add some frames to export an animation!');
+                return;
+            }
+
+            const stream = canvas.captureStream(25);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => {
+                chunks.push(e.data);
+            };
+
+            recorder.onstop = (e) => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                document.body.appendChild(a);
+                a.style = 'display: none';
+                a.href = url;
+                a.download = 'animation.webm';
+                a.click();
+                window.URL.revokeObjectURL(url);
+            };
+
+            const originalFrameIndex = currentFrameIndex;
+            let currentExportFrame = 0;
+            const fps = parseInt(fpsSlider.value, 10);
+            const interval = 1000 / fps;
+            let lastExportTime = performance.now();
+
+            recorder.start();
+            exportBtn.textContent = 'Recording...';
+            exportBtn.disabled = true;
+
+            function recordFrame(timestamp) {
+                if (currentExportFrame < frames.length) {
+                    if (timestamp - lastExportTime >= interval) {
+                        lastExportTime = timestamp;
+                        const frame = frames[currentExportFrame];
+                        points = frame.points;
+                        strokes = frame.strokes;
+                        redrawCanvas();
+                        currentExportFrame++;
+                    }
+                    requestAnimationFrame(recordFrame);
+                } else {
+                    recorder.stop();
+                    exportBtn.textContent = 'Export as Video';
+                    exportBtn.disabled = false;
+                    switchFrame(originalFrameIndex);
+                }
+            }
+            requestAnimationFrame(recordFrame);
+        }
+
+        // --- Event Listeners and Initial Setup ---
+        window.addEventListener('resize', redrawCanvas);
+
+        drawBtn.addEventListener('click', () => setMode('line'));
+        freehandBtn.addEventListener('click', () => setMode('freehand'));
+        fillBtn.addEventListener('click', () => setMode('fill'));
+        moveBtn.addEventListener('click', () => setMode('move'));
+        rotateBtn.addEventListener('click', () => setMode('rotate'));
+        moveAllBtn.addEventListener('click', () => setMode('moveAll'));
+        stretchBtn.addEventListener('click', () => setMode('stretch'));
+        eraserBtn.addEventListener('click', () => setMode('eraser'));
+
+        // Asset library listeners
+        circleAssetBtn.addEventListener('click', () => { currentAsset = 'circle'; setMode('asset'); });
+        squareAssetBtn.addEventListener('click', () => { currentAsset = 'square'; setMode('asset'); });
+        triangleAssetBtn.addEventListener('click', () => { currentAsset = 'triangle'; setMode('asset'); });
+        ovalAssetBtn.addEventListener('click', () => { currentAsset = 'oval'; setMode('asset'); });
+        
+        // Background image/color listeners
+        bgImageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        backgroundImg = img;
+                        redrawCanvas();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        bgSizeSelect.addEventListener('change', (event) => {
+            backgroundSize = event.target.value;
+            redrawCanvas();
+        });
+
+        bgColorPicker.addEventListener('input', (event) => {
+            backgroundColor = event.target.value;
+            redrawCanvas();
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the current frame?')) {
+                points = [];
+                strokes = [];
+                history = [{ points: [], strokes: [] }];
+                historyIndex = 0;
+                redrawCanvas();
+                updateFrame();
+            }
+        });
+
+        resetAllBtn.addEventListener('click', resetAll);
+
+        undoBtn.addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                loadFromHistory(historyIndex);
+                updateFrame();
+            }
+        });
+
+        redoBtn.addEventListener('click', () => {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                loadFromHistory(historyIndex);
+                updateFrame();
+            }
+        });
+
+        addFrameBtn.addEventListener('click', addFrame);
+        deleteFrameBtn.addEventListener('click', deleteCurrentFrame);
+        duplicateFrameBtn.addEventListener('click', duplicateCurrentFrame);
+
+        playBtn.addEventListener('click', () => {
+            if (!animationPlaying) {
+                animationPlaying = true;
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            animationPlaying = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        exportBtn.addEventListener('click', exportVideo);
+
+        fpsSlider.addEventListener('input', () => {
+            fpsValue.textContent = fpsSlider.value;
+        });
+
+        lineSizeSlider.addEventListener('input', () => {
+            lineSizeValue.textContent = lineSizeSlider.value;
+        });
+
+        // Initial setup
+        addFrame();
+        redrawCanvas();
+        initializeInventory();
+    </script>
+</body>
+</html>
